@@ -109,7 +109,9 @@ RUN /bin/bash -c 'cp /tmp/favicon.ico $(python -c "import sys; print(sys.path[-1
 RUN /bin/bash -c 'cp /tmp/favicon.ico $(python -c "import sys; print(sys.path[-1])")/notebook/static/favicon.ico'
 
 # Install Python Package
-RUN pip install matplotlib
+RUN git clone https://github.com/openai/CLIP && pip install -e ./CLIP
+RUN git clone https://github.com/crowsonkb/guided-diffusion && pip install -e ./guided-diffusion
+RUN pip install matplotlib ipywidgets lpips datetime
 
 # /workspace
 # Make folders
@@ -121,6 +123,9 @@ RUN \
     fi
 ENV HOME=$WORKSPACE_HOME
 WORKDIR $WORKSPACE_HOME
+
+# Copy Code
+COPY /archive /code
 
 ### Start Ainize Worksapce ###
 COPY start.sh /scripts/start.sh
