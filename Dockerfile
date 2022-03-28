@@ -34,6 +34,8 @@ RUN apt-get update --yes && \
 	curl \
 	fonts-liberation \
 	git \
+	imagemagick \
+	libgl1-mesa-glx \
 	libjpeg-dev \
 	libpng-dev \
 	libtool \
@@ -48,6 +50,7 @@ RUN apt-get update --yes && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen && \
     clean-layer.sh
+
 
 ENV \
     LC_ALL=en_US.UTF-8 \
@@ -109,9 +112,11 @@ RUN /bin/bash -c 'cp /tmp/favicon.ico $(python -c "import sys; print(sys.path[-1
 RUN /bin/bash -c 'cp /tmp/favicon.ico $(python -c "import sys; print(sys.path[-1])")/notebook/static/favicon.ico'
 
 # Install Python Package
+RUN conda install -y pytorch torchvision torchaudio cudatoolkit=11.3 pytorch3d -c pytorch -c pytorch3d
 RUN git clone https://github.com/openai/CLIP && pip install -e ./CLIP
 RUN git clone https://github.com/crowsonkb/guided-diffusion && pip install -e ./guided-diffusion
-RUN pip install matplotlib ipywidgets lpips datetime
+RUN git clone https://github.com/CompVis/taming-transformers && pip install -e ./taming-transformers
+RUN pip install matplotlib ipywidgets lpips datetime timm fvcore iopath omegaconf>=2.0.0 pytorch-lightning>=1.0.8 torch-fidelity einops wandb opencv-python pandas
 
 # /workspace
 # Make folders
