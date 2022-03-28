@@ -1,6 +1,8 @@
 echo "Run Jupyter & VSCode & TTYD"
 echo "Password: $PASSWORD"
 
+cp -R -n /code/* /workspace
+
 if [ "$GH_REPO" ]
 then
   echo "Github Repo: $GH_REPO"
