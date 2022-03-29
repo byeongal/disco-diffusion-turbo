@@ -34,8 +34,6 @@ rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/*
 if [ -x "$(command -v conda)" ]; then
     # Full Conda Cleanup
     conda clean --all -f -y
-    # Remove source cache files
-    conda build purge-all
     if [ -d $CONDA_ROOT ]; then
         # Cleanup python bytecode files - not needed: https://jcrist.github.io/conda-docker-tips.html
         find $CONDA_ROOT -type f -name '*.pyc' -delete

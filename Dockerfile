@@ -32,25 +32,32 @@ RUN apt-get update --yes && \
 	ccache \
 	cmake \
 	curl \
+	ffmpeg \
 	fonts-liberation \
+	g++ \
 	git \
 	imagemagick \
 	libgl1-mesa-glx \
 	libjpeg-dev \
+	libjson-c-dev \
 	libpng-dev \
+	libssl-dev \
 	libtool \
+	libwebsockets-dev \
 	locales \
 	make \
 	pandoc \
+	pkg-config \
 	run-one \
 	sudo \
 	tini \
+	unzip \
 	vim \
+	vim-common \
 	wget && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen && \
     clean-layer.sh
-
 
 ENV \
     LC_ALL=en_US.UTF-8 \
@@ -81,26 +88,30 @@ RUN set -x && \
     /bin/bash "${miniforge_installer}" -f -b -p "${CONDA_DIR}" && \
     rm "${miniforge_installer}" && \
     # Conda configuration see https://conda.io/projects/conda/en/latest/configuration.html
-    $CONDA_ROOT/bin/conda config --system --set auto_update_conda false && \
-    $CONDA_ROOT/bin/conda config --system --set show_channel_urls true && \
-    if [[ "${PYTHON_VERSION}" != "default" ]]; then $CONDA_ROOT/bin/mamba install --quiet --yes python="${PYTHON_VERSION}"; fi && \
+    conda config --system --set auto_update_conda false && \
+    conda config --system --set show_channel_urls true && \
+    if [[ "${PYTHON_VERSION}" != "default" ]]; then mamba install --quiet --yes python="${PYTHON_VERSION}"; fi && \
     # Pin major.minor version of python
-    $CONDA_ROOT/bin/mamba list python | grep '^python ' | tr -s ' ' | cut -d ' ' -f 1,2 >> "${CONDA_DIR}/conda-meta/pinned" && \
+    mamba list python | grep '^python ' | tr -s ' ' | cut -d ' ' -f 1,2 >> "${CONDA_DIR}/conda-meta/pinned" && \
     # Using conda to update all packages: https://github.com/mamba-org/mamba/issues/1092
-    $CONDA_ROOT/bin/conda update --all --quiet --yes && \
-    $CONDA_ROOT/bin/conda clean --all -f -y && \
+    conda update --all --quiet --yes && \
+    conda clean --all -f -y && \
     fix-permissions.sh $CONDA_ROOT && \
     clean-layer.sh
 
 # Install Jupyter
 RUN mamba install --quiet --yes \
-    'notebook' \
-    'jupyterhub' \
-    'jupyterlab' && \
+    notebook \
+    jupyterhub \
+    jupyterlab \
+    voila \
+    jupyter_contrib_nbextensions \
+    ipywidgets \
+    autopep8 \
+    yapf && \
     mamba clean --all -f -y && \
     npm cache clean --force && \
-    jupyter notebook --generate-config && \
-    jupyter lab clean && \
+    jupyter contrib nbextension install --sys-prefix && \
     fix-permissions.sh $CONDA_ROOT && \
     clean-layer.sh
 
@@ -111,12 +122,25 @@ RUN /bin/bash -c 'cp /tmp/logo.png $(python -c "import sys; print(sys.path[-1])"
 RUN /bin/bash -c 'cp /tmp/favicon.ico $(python -c "import sys; print(sys.path[-1])")/notebook/static/base/images/favicon.ico'
 RUN /bin/bash -c 'cp /tmp/favicon.ico $(python -c "import sys; print(sys.path[-1])")/notebook/static/favicon.ico'
 
-# Install Python Package
-RUN conda install -y pytorch torchvision torchaudio cudatoolkit=11.3 pytorch3d -c pytorch -c pytorch3d
-RUN git clone https://github.com/openai/CLIP && pip install -e ./CLIP
-RUN git clone https://github.com/crowsonkb/guided-diffusion && pip install -e ./guided-diffusion
-RUN git clone https://github.com/CompVis/taming-transformers && pip install -e ./taming-transformers
-RUN pip install matplotlib ipywidgets lpips datetime timm fvcore iopath omegaconf>=2.0.0 pytorch-lightning>=1.0.8 torch-fidelity einops wandb opencv-python pandas
+## Install Visual Studio Code Server
+RUN curl -fsSL https://code-server.dev/install.sh | sh && \
+    clean-layer.sh
+
+## Install ttyd. (Not recommended to edit)
+RUN apt-get update --yes && \
+    apt-get upgrade --yes && \
+    apt-get install --yes --no-install-recommends libwebsockets-dev libjson-c-dev libssl-dev
+
+RUN \
+    wget https://github.com/tsl0922/ttyd/archive/refs/tags/1.6.2.zip \
+    && unzip 1.6.2.zip \
+    && cd ttyd-1.6.2 \
+    && mkdir build \
+    && cd build \
+    && cmake .. \
+    && make \
+    && make install \
+    && clean-layer.sh
 
 # /workspace
 # Make folders
@@ -130,7 +154,13 @@ ENV HOME=$WORKSPACE_HOME
 WORKDIR $WORKSPACE_HOME
 
 # Copy Code
-COPY /archive /code
+COPY /Disco_Diffusion.ipynb.ipynb /code/Disco_Diffusion.ipynb.ipynb
+
+# Install package from environment.yml ( conda )
+COPY environment.yml ./environment.yml
+RUN conda env update --name root --file environment.yml && \
+    rm environment.yml && \
+    clean-layer.sh
 
 ### Start Ainize Worksapce ###
 COPY start.sh /scripts/start.sh
